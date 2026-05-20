@@ -69,3 +69,62 @@ jobs:
         # Skipping backend tests as they are not configured yet. 
         # You can replace this with "npm test" later.
         echo "Backend tests skipped"
+
+  deploy-frontend-aws:
+    name: Deploy Frontend to AWS S3
+    runs-on: ubuntu-latest
+    needs: frontend-ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+
+    - name: Install Dependencies & Build
+      working-directory: frontend
+      run: |
+        npm ci
+        CI=false npm run build --if-present
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to S3
+      run: |
+        # Replace 'your-bucket-name' with your actual S3 bucket name
+        # aws s3 sync frontend/build/ s3://your-bucket-name --delete
+        echo "Uncomment the line above after setting up your S3 bucket"
+
+  deploy-backend-aws:
+    name: Deploy Backend to AWS Elastic Beanstalk
+    runs-on: ubuntu-latest
+    needs: backend-ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Generate Deployment Package
+      run: zip -r deploy.zip backend/ -x "*.git*"
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to Elastic Beanstalk
+      run: |
+        # Replace with your Elastic Beanstalk application and environment names
+        # aws elasticbeanstalk create-application-version --application-name "YourAppName" --version-label "Ver-${{ github.sha }}" --source-bundle S3Bucket="your-eb-bucket",S3Key="deploy.zip"
+        # aws elasticbeanstalk update-environment --environment-name "YourEnvName" --version-label "Ver-${{ github.sha }}"
+        echo "Uncomment and configure the EB commands after setting up Elastic Beanstalk"
