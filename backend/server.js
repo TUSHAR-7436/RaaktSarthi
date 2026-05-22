@@ -11,6 +11,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy headers for accurate client IP rate limiting behind Nginx
+app.set('trust proxy', 1);
+
 // CORS configuration - MUST be applied before other middleware
 const corsOptions = {
   origin: function (origin, callback) {
